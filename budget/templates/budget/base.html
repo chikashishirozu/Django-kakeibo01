@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}家計簿アプリ{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="favicon.png" rel="shortcut icon" type="imgage">
+    <style>
+        .balance-positive { color: #28a745; }
+        .balance-negative { color: #dc3545; }
+        .category-badge { font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'budget:dashboard' %}">
+                <i class="fas fa-wallet me-2"></i>家計簿
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{% url 'budget:add_entry' %}">
+                    <i class="fas fa-plus me-1"></i>入力
+                </a>
+                <a class="nav-link" href="{% url 'budget:monthly_view' %}">
+                    <i class="fas fa-calendar me-1"></i>月別
+                </a>
+                <a href="{% url 'budget:graph' %}" class="nav-link">
+                    <i class="fas fa-calendar me-2"></i>年間月別グラフ表示へ
+                </a>                
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
