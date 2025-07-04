@@ -1,0 +1,29 @@
+<!-- budget/templates/budget/monthly_view.html -->
+{% extends 'budget/base.html' %}
+
+{% block content %}
+<h1>{{ year }}年{{ month }}月の家計簿</h1>
+
+<!-- ページネーションの表示例 -->
+<ul>
+  {% for entry in page_obj %}
+    <li>{{ entry.date }} - {{ entry.category.name }} - {{ entry.amount }}</li>
+  {% endfor %}
+</ul>
+
+<!-- ページネーションナビゲーション -->
+<div>
+  {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}">前へ</a>
+  {% endif %}
+  <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">次へ</a>
+  {% endif %}
+</div>
+
+<p style="margin: 50px auto 0 30px;">収入データ: {{ income_data }}</p>
+<p style="margin: 30px auto 50px 30px;">支出データ: {{ expense_data }}</p>
+
+{% endblock %}
+

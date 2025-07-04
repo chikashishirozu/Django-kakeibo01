@@ -1,0 +1,52 @@
+{% extends 'budget/base.html' %}
+{% block title %}グラフ表示{% endblock %}
+{% block content %}
+<h2>{{ year }}年の収支グラフ</h2>
+<canvas id="monthlyChart" height="100"></canvas>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('monthlyChart').getContext('2d');
+    const monthlyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ months|safe }},
+            datasets: [
+                {
+                    label: '収入',
+                    data: {{ income_data|safe }},
+                    backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: '支出',
+                    data: {{ expense_data|safe }},
+                    backgroundColor: 'rgba(220, 53, 69, 0.6)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '円';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+<p style="margin: 50px auto 0 150px;">収入データ: {{ income_data }}</p>
+<p style="margin: 30px auto 50px 150px;">支出データ: {{ expense_data }}</p>
+
+{% endblock %}
+

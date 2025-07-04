@@ -1,0 +1,109 @@
+{% extends 'budget/base.html' %}
+
+{% block title %}ダッシュボード - 家計簿アプリ{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2><i class="fas fa-chart-line me-2"></i>現在の状況</h2>
+        
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">今月の収入</h5>
+                        <h3 class="text-success">{{ monthly_income|floatformat:0 }}円</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">今月の支出</h5>
+                        <h3 class="text-danger">{{ monthly_expense|floatformat:0 }}円</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">今月の収支</h5>
+                        <h3 class="{% if monthly_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ monthly_balance|floatformat:0 }}円
+                        </h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h5 class="card-title text-primary">年間貯蓄</h5>
+                        <h3 class="{% if yearly_savings >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ yearly_savings|floatformat:0 }}円
+                        </h3>
+                        {% if yearly_goal %}
+                            <small class="text-muted">
+                                目標: {{ yearly_goal.savings_goal|floatformat:0 }}円
+                                ({{ goal_achievement_rate|floatformat:1 }}%)
+                            </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h3><i class="fas fa-history me-2"></i>最近のエントリ</h3>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>日付</th>
+                        <th>カテゴリ</th>
+                        <th>摘要</th>
+                        <th class="text-end">金額</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in recent_entries %}
+                    <tr>
+                        <td>{{ entry.date }}</td>
+                        <td>
+                            <span class="badge category-badge" style="background-color: {{ entry.category.color }}">
+                                {{ entry.category.name }}
+                            </span>
+                        </td>
+                        <td>{{ entry.description|default:"-" }}</td>
+                        <td class="text-end {% if entry.category.category_type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                            {% if entry.category.category_type == 'income' %}+{% else %}-{% endif %}{{ entry.amount|floatformat:0 }}円
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">エントリがありません</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-plus me-2"></i>クイック入力</h5>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'budget:add_entry' %}" class="btn btn-primary btn-lg w-100 mb-3">
+                    <i class="fas fa-plus me-2"></i>新しいエントリを追加
+                </a>
+                <a href="{% url 'budget:monthly_view' %}" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-calendar me-2"></i>月別表示へ
+                </a>
+                <a href="{% url 'budget:graph' %}" class="btn btn-outline-primary w-100" style="margin-top: 20px;">
+                    <i class="fas fa-calendar me-2"></i>年間月別グラフ表示へ
+                </a>                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
