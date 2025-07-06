@@ -75,7 +75,7 @@ Industry common sense: Always implement the --help option for custom commands. T
 
 Also, in a production environment, it is best practice to add the --dry-run option (which does not actually run the command, but only displays what it does). Countless developers have cried over deleting large amounts of data...😅
 
-# Rin App
+# Run App
 $ source venv/bin/activate
 
 (venv)$ python manage.py runserver 127.0.0.1:7007
