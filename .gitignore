@@ -1,5 +1,12 @@
+# Secrets and local data
 .env
-db.sqlite3
+db.sqlite3*
+
+# Python
+venv/
+.venv/
 __pycache__/
 *.pyc
+
+# Build output
 staticfiles/

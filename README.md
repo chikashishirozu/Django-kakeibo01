@@ -1,134 +1,100 @@
-# Django-kakeibo01
-I built a home budgeting app with Django.
+# Django Kakeibo (Household Budget App)
 
-# Virtual environment setup
-```
-phthon3.13 -m venv venv
+A multi-user household budget app built with Django.
+Each user sees only their own income and expenses.
 
-source venv/bin/activate
+## Features
 
-pip install -r requirements.txt   # whitenoise が入っています
+- Dashboard: this month's income / expense / balance, yearly savings and goal progress
+- Add, edit and delete income and expense entries
+- Monthly view with per-category totals and pagination
+- Yearly bar chart (income vs. expense for every month)
+- Yearly savings goals (per user)
+- Login, logout and sign-up (sign-up can be switched off)
 
-```
-# Create staticfiles
-```
-python manage.py collectstatic --noinput
+## Requirements
 
-```
-# Create a directory in the budget app
-```
-cd budget
+- Python 3.10 or later (3.13 recommended)
+- Django 5.2 LTS (installed by `requirements.txt`)
 
-mkdir -p management/commands
+## Quick start (local development)
 
-```
-# Create the necessary __init__.py file (IMPORTANT!)
-```
-touch management/__init__.py
+Run these commands in the project root (the directory that contains `manage.py`).
 
-touch management/commands/__init__.py
-```
+```bash
+python3 -m venv venv
+source venv/bin/activate            # Windows: venv\Scripts\activate
+pip install -r requirements.txt
 
-# Create the .env file
-```
-python -c "from django.core.management.utils import get_random_secret_key as g; print(g())"
+cp .env.example .env                # default values are fine for local use
 
-```
-add new secret key
+python manage.py migrate            # create db.sqlite3
+python manage.py setup_categories   # load the initial categories (required on an empty DB)
+python manage.py createsuperuser    # create the first user
 
-# Create db.sqlite3 file
-```
-cd household_budget
-
-source venv/bin/activate
-
-python manage.py migrate
-
-python manage.py createsuperuser           # ユーザー名・パスワードを対話で入力
-
-python manage.py setup_categories          # カテゴリの初期登録（空DBでは必須）
-```
-# (Use the same code from the previous time)
-
-Industry Tip: Why do we need __init__.py?
-To make it recognized as a Python "package". Django scans the management/commands/ directory and registers the .py files in it as commands. Without __init__.py, it will be treated as "just a directory" and will not be recognized.
-
-# Run in the project root (where manage.py is located)
-```
-python manage.py setup_categories
-```
-More useful usage
-
-Django home accounting app complete guide
-Documents ∙ Version 2
-
-Industry common: Custom command usage
-In actual development sites, custom commands are used for the following purposes:
-
-1. Database initialization
-bash
-```
-python manage.py setup_initial_data
-
-python manage.py import_legacy_data
-
-python manage.py changepassword user
-
-python manage.py createsuperuser           # ユーザー名・パスワードを対話で入力
-
-python manage.py setup_categories          # カテゴリの初期登録（空DBでは必須）
-
+python manage.py runserver
 ```
 
-2. Periodic tasks (via cron)
+Open <http://127.0.0.1:8000/budget/> and log in.
 
-bash
+| URL | Page |
+| --- | --- |
+| `/budget/` | Dashboard |
+| `/budget/goals/` | Yearly goals |
+| `/accounts/signup/` | Sign up (only when `ALLOW_SIGNUP=True`) |
+| `/admin/` | Django admin |
 
-# Run daily
+## Management commands
+
+```bash
+python manage.py setup_categories --help
+python manage.py setup_categories                              # add the default categories
+python manage.py setup_categories --user alice --goal 300000   # also create alice's goal for this year
+python manage.py changepassword alice                          # reset a forgotten password
 ```
 
-python manage.py daily_report
+> **Warning: `setup_categories --reset` deletes every category, and because of
+> `on_delete=CASCADE` it also deletes every budget entry that uses them.**
+> Back up `db.sqlite3` first (`cp db.sqlite3 db.sqlite3.bak`).
 
-python manage.py cleanup_old_data
+## Tests
+
+```bash
+python manage.py test budget.tests
 ```
 
-3. Maintenance tasks
+Run this again after upgrading Python or any package.
 
-bash
-```
-python manage.py fix_data_inconsistency
+## Deployment notes
 
-python manage.py recalculate_totals
-```
-# Launch in development environment
-```
-python manage.py runserver 127.0.0.1:7003
-```
+The development server (`runserver`) is not meant for production.
+Before exposing the app to the internet:
 
-Runtime troubleshooting
+1. Set the production values in `.env` (see the commented block in `.env.example`):
+   a new `DJANGO_SECRET_KEY`, `DEBUG=False` and your real `ALLOWED_HOSTS`.
+2. Serving over HTTPS? Set `USE_HTTPS=True` (and `BEHIND_PROXY=True` behind a reverse proxy).
+   Start with a short `SECURE_HSTS_SECONDS` and raise it gradually.
+3. Collect static files (served by WhiteNoise):
+   ```bash
+   python manage.py collectstatic --noinput
+   ```
+4. Run `python manage.py check --deploy` and review the warnings.
+5. Close sign-up with `ALLOW_SIGNUP=False` once everyone has registered.
 
-Common error 1: No module named 'budget.models'
+Never commit `.env` or `db.sqlite3`.
 
-Cause: Missing __init__.py file Solution: Place an empty __init__.py in each directory
+## Troubleshooting
 
-Common error 2: Unknown command: 'setup_categories'
+| Symptom | Cause and fix |
+| --- | --- |
+| `400 Bad Request` on every page | The host name is not in `ALLOWED_HOSTS`. Add `127.0.0.1,localhost` to `.env` and restart. |
+| `AttributeError: 'super' object has no attribute 'dicts'` | Django is too old for your Python (for example Django 4.2 with Python 3.14+). Run `pip install -r requirements.txt`, then **restart** `runserver`. |
+| `'budget' is not a registered namespace` | `budget/urls.py` is empty or outdated. Make sure all project files are up to date. |
+| `Unknown command: 'setup_categories'` | Run the command from the directory that contains `manage.py`, and check that `'budget'` is in `INSTALLED_APPS`. |
+| The category list is empty on the entry form | Run `python manage.py setup_categories`. |
+| Forgot the password | `python manage.py changepassword <username>` |
+| Still the old behaviour after `pip install` | The running server keeps the old libraries in memory. Stop it with Ctrl+C and start it again. |
 
-Cause: Django doesn't recognize the command Solution:
+## License
 
-Check file placement
-Check if 'budget' is registered in INSTALLED_APPS
-
-Common error 3: apps aren't loaded yet
-Cause: Django environment not initialized properly Solution: Run via python manage.py
-
-Pro Tips 💡
-Industry common sense: Always implement the --help option for custom commands. This will prevent your future self or colleagues from wondering, "What does this command do?"
-
-Also, in a production environment, it is best practice to add the --dry-run option (which does not actually run the command, but only displays what it does). Countless developers have cried over deleting large amounts of data...😅
-
-# Run App
-$ source venv/bin/activate
-
-(venv)$ python manage.py runserver 127.0.0.1:7007
-
-Open brawser http://127.0.0.1:7007/budget/
+No license is specified. All rights are reserved by the author.
