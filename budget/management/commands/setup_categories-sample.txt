@@ -1,0 +1,29 @@
+from django.core.management.base import BaseCommand
+from budget.models import Category
+
+class Command(BaseCommand):
+    help = 'Setup initial categories'
+
+    def handle(self, *args, **options):
+        categories = [
+            # 収入カテゴリ
+            {'name': '給与', 'category_type': 'income', 'color': '#28a745'},
+            {'name': 'ボーナス', 'category_type': 'income', 'color': '#17a2b8'},
+            {'name': '副業', 'category_type': 'income', 'color': '#6f42c1'},
+            
+            # 支出カテゴリ
+            {'name': '食費', 'category_type': 'expense', 'color': '#fd7e14'},
+            {'name': '交通費', 'category_type': 'expense', 'color': '#20c997'},
+            {'name': '日用品', 'category_type': 'expense', 'color': '#ffc107'},
+            {'name': '光熱費', 'category_type': 'expense', 'color': '#dc3545'},
+            {'name': '通信費', 'category_type': 'expense', 'color': '#6610f2'},
+            {'name': '娯楽', 'category_type': 'expense', 'color': '#e83e8c'},
+        ]
+        
+        for cat_data in categories:
+            category, created = Category.objects.get_or_create(
+                name=cat_data['name'],
+                defaults=cat_data
+            )
+            if created:
+                self.stdout.write(f'Created category: {category.name}')

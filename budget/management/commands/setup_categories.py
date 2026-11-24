@@ -1,5 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.core.management.color import make_style
+from django.contrib.auth.models import User
+from django.core.management.base import CommandError
 from budget.models import Category, YearlyGoal
 from datetime import date
 
@@ -18,14 +20,27 @@ class Command(BaseCommand):
             help='既存のカテゴリを削除してから作成',
         )
         parser.add_argument(
+            '--user',
+            default=None,
+            help='年間目標を作る対象のユーザー名（省略すると目標は作らない）',
+        )
+        parser.add_argument(
             '--goal',
             type=int,
             default=200000,
-            help='年間貯蓄目標額（デフォルト: 200000円）',
+            help='--user 指定時の年間貯蓄目標額（デフォルト: 200000円）',
         )
 
     def handle(self, *args, **options):
         """メイン処理"""
+        # 目標はユーザーごとなので、先に対象ユーザーを確認する（無ければカテゴリも作らず中止）
+        goal_user = None
+        if options['user']:
+            try:
+                goal_user = User.objects.get(username=options['user'])
+            except User.DoesNotExist:
+                raise CommandError(f"ユーザー '{options['user']}' は存在しません。")
+
         if options['reset']:
             self.stdout.write('既存カテゴリを削除中...')
             Category.objects.all().delete()
@@ -64,23 +79,26 @@ class Command(BaseCommand):
                     self.style.WARNING(f'- 既存: {category.name}')
                 )
         
-        # 年間目標設定
-        current_year = date.today().year
-        goal_amount = options['goal']
-        yearly_goal, goal_created = YearlyGoal.objects.get_or_create(
-            year=current_year,
-            defaults={'savings_goal': goal_amount}
-        )
-        
-        if goal_created:
-            self.stdout.write(
-                self.style.SUCCESS(f'✓ {current_year}年の貯蓄目標を設定: {goal_amount:,}円')
+        # 年間目標設定（--user 指定時のみ）
+        if goal_user:
+            current_year = date.today().year
+            goal_amount = options['goal']
+            yearly_goal, goal_created = YearlyGoal.objects.get_or_create(
+                user=goal_user,
+                year=current_year,
+                defaults={'savings_goal': goal_amount}
             )
+            if goal_created:
+                self.stdout.write(
+                    self.style.SUCCESS(f'✓ {goal_user.username} の{current_year}年の貯蓄目標を設定: {goal_amount:,}円')
+                )
+            else:
+                self.stdout.write(
+                    self.style.WARNING(f'- {goal_user.username} の{current_year}年の目標は既存: {yearly_goal.savings_goal:,}円')
+                )
         else:
-            self.stdout.write(
-                self.style.WARNING(f'- {current_year}年の目標は既存: {yearly_goal.savings_goal:,}円')
-            )
-        
+            self.stdout.write('年間目標は作成しません（アプリの「目標」画面から設定できます）。')
+
         # サマリー表示
         self.stdout.write('\n' + '='*50)
         self.stdout.write(self.style.SUCCESS(f'セットアップ完了！'))
