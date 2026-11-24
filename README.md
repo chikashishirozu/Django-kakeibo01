@@ -1,27 +1,62 @@
 # Django-kakeibo01
 I built a home budgeting app with Django.
 
+# Virtual environment setup
+```
+phthon3.13 -m venv venv
+
+source venv/bin/activate
+
+pip install -r requirements.txt   # whitenoise が入っています
+
+```
+# Create staticfiles
+```
+python manage.py collectstatic --noinput
+
+```
 # Create a directory in the budget app
+```
 cd budget
 
 mkdir -p management/commands
 
+```
 # Create the necessary __init__.py file (IMPORTANT!)
-
+```
 touch management/__init__.py
 
 touch management/commands/__init__.py
+```
 
-# Create setup_categories.py
+# Create the .env file
+```
+python -c "from django.core.management.utils import get_random_secret_key as g; print(g())"
 
+```
+add new secret key
+
+# Create db.sqlite3 file
+```
+cd household_budget
+
+source venv/bin/activate
+
+python manage.py migrate
+
+python manage.py createsuperuser           # ユーザー名・パスワードを対話で入力
+
+python manage.py setup_categories          # カテゴリの初期登録（空DBでは必須）
+```
 # (Use the same code from the previous time)
 
 Industry Tip: Why do we need __init__.py?
 To make it recognized as a Python "package". Django scans the management/commands/ directory and registers the .py files in it as commands. Without __init__.py, it will be treated as "just a directory" and will not be recognized.
 
 # Run in the project root (where manage.py is located)
-
+```
 python manage.py setup_categories
+```
 More useful usage
 
 Django home accounting app complete guide
@@ -32,27 +67,43 @@ In actual development sites, custom commands are used for the following purposes
 
 1. Database initialization
 bash
+```
 python manage.py setup_initial_data
 
 python manage.py import_legacy_data
+
+python manage.py changepassword user
+
+python manage.py createsuperuser           # ユーザー名・パスワードを対話で入力
+
+python manage.py setup_categories          # カテゴリの初期登録（空DBでは必須）
+
+```
 
 2. Periodic tasks (via cron)
 
 bash
 
 # Run daily
+```
 
 python manage.py daily_report
 
 python manage.py cleanup_old_data
+```
 
 3. Maintenance tasks
 
 bash
-
+```
 python manage.py fix_data_inconsistency
 
 python manage.py recalculate_totals
+```
+# Launch in development environment
+```
+python manage.py runserver 127.0.0.1:7003
+```
 
 Runtime troubleshooting
 
