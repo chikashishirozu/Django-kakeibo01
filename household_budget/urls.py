@@ -1,25 +1,21 @@
-"""
-URL configuration for household_budget project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/4.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+"""household_budget プロジェクトの URL 設定"""
 from django.contrib import admin
-from django.urls import path, include
+from django.contrib.auth import views as auth_views
+from django.urls import include, path
 from django.views.generic import RedirectView
+
+from budget import views as budget_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # ログイン / ログアウト（settings.LOGIN_URL = 'login' が指す先）
+    path('accounts/login/', budget_views.BudgetLoginView.as_view(), name='login'),
+    path('accounts/signup/', budget_views.signup, name='signup'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
+
     path('budget/', include('budget.urls')),
-    path('', RedirectView.as_view(url='budget/', permanent=True)),  # リダイレクト設定    
+
+    # permanent=True (301) はブラウザに永久キャッシュされるため、将来の変更に備えて 302 にする
+    path('', RedirectView.as_view(pattern_name='budget:dashboard', permanent=False)),
 ]

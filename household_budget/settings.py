@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 
+from decouple import Csv, config
+from django.contrib.messages import constants as message_constants
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,12 +23,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-k1-xo9ni+(9i-h=0wmgvq6p!bl%b@4nu*el@)huuli#8(io%$n'
+# 本番では環境変数（または .env）で必ず上書きすること
+SECRET_KEY = config(
+    'DJANGO_SECRET_KEY',
+    default='django-insecure-dev-only-change-me',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='', cast=Csv())
 
 
 # Application definition
@@ -42,6 +49,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # 本番で静的ファイルを配信する。SecurityMiddleware の直後に置くのが公式の作法
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -104,9 +113,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'ja'
 
-TIME_ZONE = 'UTC'
+# date.today() などの「今日」を日本時間で判定するため Asia/Tokyo にする
+TIME_ZONE = 'Asia/Tokyo'
 
 USE_I18N = True
 
@@ -117,8 +127,71 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+# プロジェクト直下の static/ (favicon.png など) を配信対象にする
+STATICFILES_DIRS = [BASE_DIR / 'static']
+# collectstatic の出力先。本番ではここを WhiteNoise が配信する
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        # 本番: 圧縮 + ファイル名にハッシュ付与（favicon.3f9a2c.png）で永久キャッシュ可能にする。
+        # 開発/テスト: 通常のストレージ（ハッシュ付与だと collectstatic 前に {% static %} が失敗するため）
+        'BACKEND': (
+            'django.contrib.staticfiles.storage.StaticFilesStorage'
+            if DEBUG else
+            'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        ),
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# --- 認証 -------------------------------------------------------------
+# @login_required の転送先。urls.py の name='login' を指す
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'budget:dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+
+# ユーザー登録画面を使えるか。家族の登録が済んだら False にして閉じるのがおすすめ
+ALLOW_SIGNUP = config('ALLOW_SIGNUP', default=True, cast=bool)
+
+# --- メッセージ -------------------------------------------------------
+# Django の 'error' タグは Bootstrap に無いクラス名なので 'danger' に読み替える
+MESSAGE_TAGS = {
+    message_constants.ERROR: 'danger',
+}
+
+
+# --- キーの交換（ローテーション） ----------------------------------------
+# 新キーを DJANGO_SECRET_KEY に、旧キーをここに入れると、
+# 旧キーで署名されたセッション等も有効なまま移行できる（Django 4.1+）。
+# 全員が移行し終えたら（セッション有効期限=既定2週間後）消す。
+SECRET_KEY_FALLBACKS = config('SECRET_KEY_FALLBACKS', default='', cast=Csv())
+
+# --- HTTPS 公開時のセキュリティ設定 -----------------------------------------
+# 自宅LANなど HTTP のままなら USE_HTTPS=False（既定）にしておく。
+# （True のまま HTTP で使うと、HTTPS へ転送されて繋がらなくなる）
+USE_HTTPS = config('USE_HTTPS', default=False, cast=bool)
+
+if USE_HTTPS:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # HSTS は「一度出すと、その期間はHTTP接続を拒否される」ので、短く始めて段階的に延ばす。
+    # 3600(1時間) → 86400(1日) → 2592000(30日) → 31536000(1年)
+    SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=3600, cast=int)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=False, cast=bool)
+
+# Render / Heroku / nginx などの「リバースプロキシの後ろ」で動かす場合。
+# プロキシが X-Forwarded-Proto を付けてくれる前提で、これが無いと
+# Django は常に HTTP と判断し、SSL_REDIRECT が無限ループする。
+if config('BEHIND_PROXY', default=False, cast=bool):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# HTTPS のドメインから POST する場合に必要（Django 4.0+）。例: https://example.com
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
