@@ -1,29 +1,132 @@
-<!-- budget/templates/budget/monthly_view.html -->
 {% extends 'budget/base.html' %}
+{% load budget_extras %}
+
+{% block title %}{{ year }}年{{ month }}月 - 家計簿アプリ{% endblock %}
 
 {% block content %}
-<h1>{{ year }}年{{ month }}月の家計簿</h1>
-
-<!-- ページネーションの表示例 -->
-<ul>
-  {% for entry in page_obj %}
-    <li>{{ entry.date }} - {{ entry.category.name }} - {{ entry.amount }}</li>
-  {% endfor %}
-</ul>
-
-<!-- ページネーションナビゲーション -->
-<div>
-  {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}">前へ</a>
-  {% endif %}
-  <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-  {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}">次へ</a>
-  {% endif %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h1 class="h3 mb-0">{{ year }}年{{ month }}月の家計簿</h1>
+    <div class="btn-group">
+        <a class="btn btn-outline-primary btn-sm"
+           href="?year={{ prev_month.year }}&amp;month={{ prev_month.month }}">&laquo; 前月</a>
+        <a class="btn btn-outline-primary btn-sm"
+           href="?year={{ next_month.year }}&amp;month={{ next_month.month }}">翌月 &raquo;</a>
+    </div>
 </div>
 
-<p style="margin: 50px auto 0 30px;">収入データ: {{ income_data }}</p>
-<p style="margin: 30px auto 50px 30px;">支出データ: {{ expense_data }}</p>
+{# 年月の絞り込みフォーム #}
+<form method="get" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+        <label class="form-label" for="{{ form.year.id_for_label }}">{{ form.year.label }}</label>
+        {{ form.year }}
+    </div>
+    <div class="col-auto">
+        <label class="form-label" for="{{ form.month.id_for_label }}">{{ form.month.label }}</label>
+        {{ form.month }}
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">表示</button>
+    </div>
+</form>
 
+{# サマリー #}
+<div class="row g-2 mb-4 text-center">
+    <div class="col-4">
+        <div class="card"><div class="card-body py-2">
+            <div class="text-muted small">収入</div>
+            <div class="h5 mb-0 text-success">{{ total_income|yen }}</div>
+        </div></div>
+    </div>
+    <div class="col-4">
+        <div class="card"><div class="card-body py-2">
+            <div class="text-muted small">支出</div>
+            <div class="h5 mb-0 text-danger">{{ total_expense|yen }}</div>
+        </div></div>
+    </div>
+    <div class="col-4">
+        <div class="card"><div class="card-body py-2">
+            <div class="text-muted small">収支</div>
+            <div class="h5 mb-0 {% if balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ balance|yen }}
+            </div>
+        </div></div>
+    </div>
+</div>
+
+{# カテゴリ別集計 #}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h2 class="h5">収入（カテゴリ別）</h2>
+        <ul class="list-group">
+            {% for item in income_by_category %}
+            <li class="list-group-item d-flex justify-content-between">
+                <span><span class="badge category-badge" style="background-color: {{ item.category__color }}">&nbsp;</span>
+                    {{ item.category__name }}</span>
+                <span class="text-success">{{ item.total|yen }}</span>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted">データがありません</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-md-6 mt-3 mt-md-0">
+        <h2 class="h5">支出（カテゴリ別）</h2>
+        <ul class="list-group">
+            {% for item in expense_by_category %}
+            <li class="list-group-item d-flex justify-content-between">
+                <span><span class="badge category-badge" style="background-color: {{ item.category__color }}">&nbsp;</span>
+                    {{ item.category__name }}</span>
+                <span class="text-danger">{{ item.total|yen }}</span>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted">データがありません</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+{# 明細 #}
+<h2 class="h5">明細</h2>
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>日付</th><th>カテゴリ</th><th>摘要</th>
+                <th class="text-end">金額</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in page_obj %}
+            <tr>
+                <td>{{ entry.date }}</td>
+                <td>
+                    <span class="badge category-badge" style="background-color: {{ entry.category.color }}">
+                        {{ entry.category.name }}
+                    </span>
+                </td>
+                <td>{{ entry.description|default:"-" }}</td>
+                <td class="text-end {% if entry.category.category_type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                    {% if entry.category.category_type == 'income' %}+{% else %}-{% endif %}{{ entry.amount|yen }}
+                </td>
+                <td>{% include 'budget/_entry_actions.html' %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted">この月のエントリはありません</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# ページ送り：年月を引き継ぐ #}
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="d-flex justify-content-center align-items-center gap-3">
+    {% if page_obj.has_previous %}
+        <a class="btn btn-outline-primary btn-sm" href="?{{ querystring }}&amp;page={{ page_obj.previous_page_number }}">前へ</a>
+    {% endif %}
+    <span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }} ページ</span>
+    {% if page_obj.has_next %}
+        <a class="btn btn-outline-primary btn-sm" href="?{{ querystring }}&amp;page={{ page_obj.next_page_number }}">次へ</a>
+    {% endif %}
+</nav>
+{% endif %}
 {% endblock %}
-

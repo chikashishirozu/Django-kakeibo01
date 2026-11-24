@@ -1,0 +1,15 @@
+{# 編集・削除ボタン。呼び出し側で entry を渡す。操作後は今の画面に戻る #}
+<div class="d-flex gap-1 justify-content-end">
+    <a href="{% url 'budget:edit_entry' entry.pk %}?next={{ request.get_full_path|urlencode }}"
+       class="btn btn-sm btn-outline-secondary" title="編集">
+        <i class="fas fa-pen"></i>
+    </a>
+    <form method="post" action="{% url 'budget:delete_entry' entry.pk %}"
+          onsubmit="return confirm('このエントリを削除しますか？');">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="btn btn-sm btn-outline-danger" title="削除">
+            <i class="fas fa-trash"></i>
+        </button>
+    </form>
+</div>

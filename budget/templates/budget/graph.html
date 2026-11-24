@@ -1,28 +1,71 @@
 {% extends 'budget/base.html' %}
-{% block title %}グラフ表示{% endblock %}
+{% load budget_extras %}
+
+{% block title %}{{ year }}年のグラフ - 家計簿アプリ{% endblock %}
+
 {% block content %}
-<h2>{{ year }}年の収支グラフ</h2>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h2 class="mb-0">{{ year }}年の収支グラフ</h2>
+    <div class="btn-group">
+        <a class="btn btn-outline-primary btn-sm" href="?year={{ year|add:'-1' }}">&laquo; {{ year|add:'-1' }}年</a>
+        <a class="btn btn-outline-primary btn-sm" href="?year={{ year|add:'1' }}">{{ year|add:'1' }}年 &raquo;</a>
+    </div>
+</div>
+
 <canvas id="monthlyChart" height="100"></canvas>
+
+<div class="table-responsive mt-4">
+    <table class="table table-sm table-striped text-end">
+        <thead>
+            <tr><th class="text-start">月</th><th>収入</th><th>支出</th><th>収支</th></tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td class="text-start">{{ row.label }}</td>
+                <td class="text-success">{{ row.income|yen }}</td>
+                <td class="text-danger">{{ row.expense|yen }}</td>
+                <td class="{% if row.balance >= 0 %}text-success{% else %}text-danger{% endif %}">{{ row.balance|yen }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="fw-bold">
+                <td class="text-start">合計</td>
+                <td>{{ total_income|yen }}</td>
+                <td>{{ total_expense|yen }}</td>
+                <td class="{% if total_balance >= 0 %}text-success{% else %}text-danger{% endif %}">{{ total_balance|yen }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+{# |safe を使わず json_script で安全に JS へ渡す #}
+{{ months|json_script:"chart-months" }}
+{{ income_data|json_script:"chart-income" }}
+{{ expense_data|json_script:"chart-expense" }}
 {% endblock %}
+
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-    const ctx = document.getElementById('monthlyChart').getContext('2d');
-    const monthlyChart = new Chart(ctx, {
+    const read = (id) => JSON.parse(document.getElementById(id).textContent);
+
+    new Chart(document.getElementById('monthlyChart').getContext('2d'), {
         type: 'bar',
         data: {
-            labels: {{ months|safe }},
+            labels: read('chart-months'),
             datasets: [
                 {
                     label: '収入',
-                    data: {{ income_data|safe }},
+                    data: read('chart-income'),
                     backgroundColor: 'rgba(40, 167, 69, 0.6)',
                     borderColor: 'rgba(40, 167, 69, 1)',
                     borderWidth: 1
                 },
                 {
                     label: '支出',
-                    data: {{ expense_data|safe }},
+                    data: read('chart-expense'),
                     backgroundColor: 'rgba(220, 53, 69, 0.6)',
                     borderColor: 'rgba(220, 53, 69, 1)',
                     borderWidth: 1
@@ -34,19 +77,10 @@
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return value + '円';
-                        }
-                    }
+                    ticks: { callback: (value) => value.toLocaleString() + '円' }
                 }
             }
         }
     });
 </script>
-
-<p style="margin: 50px auto 0 150px;">収入データ: {{ income_data }}</p>
-<p style="margin: 30px auto 50px 150px;">支出データ: {{ expense_data }}</p>
-
 {% endblock %}
-

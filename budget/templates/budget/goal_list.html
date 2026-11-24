@@ -1,0 +1,66 @@
+{% extends 'budget/base.html' %}
+{% load budget_extras %}
+
+{% block title %}年間目標 - 家計簿アプリ{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-3"><i class="fas fa-bullseye me-2"></i>年間貯蓄目標</h1>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr><th>年</th><th class="text-end">目標</th><th class="text-end">現在の貯蓄</th><th style="width:28%">達成率</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td>{{ row.goal.year }}年</td>
+                        <td class="text-end">{{ row.goal.savings_goal|yen }}</td>
+                        <td class="text-end {% if row.savings >= 0 %}text-success{% else %}text-danger{% endif %}">{{ row.savings|yen }}</td>
+                        <td>
+                            <div class="progress" role="progressbar" aria-valuenow="{{ row.bar }}" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar {% if row.rate >= 100 %}bg-success{% endif %}" style="width: {{ row.bar }}%"></div>
+                            </div>
+                            <small class="text-muted">{{ row.rate }}%</small>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1 justify-content-end">
+                                <a href="{% url 'budget:goal_edit' row.goal.pk %}" class="btn btn-sm btn-outline-secondary" title="編集"><i class="fas fa-pen"></i></a>
+                                <form method="post" action="{% url 'budget:goal_delete' row.goal.pk %}"
+                                      onsubmit="return confirm('{{ row.goal.year }}年の目標を削除しますか？');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="削除"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center text-muted">まだ目標がありません。右のフォームから登録しましょう。</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><h2 class="h5 mb-0">目標を追加</h2></div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary">登録</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

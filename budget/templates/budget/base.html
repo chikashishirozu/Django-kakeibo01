@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -6,7 +6,7 @@
     <title>{% block title %}家計簿アプリ{% endblock %}</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="favicon.png" rel="shortcut icon" type="imgage">
+    <link href="{% static 'favicon.png' %}" rel="shortcut icon" type="image/png">
     <style>
         .balance-positive { color: #28a745; }
         .balance-negative { color: #dc3545; }
@@ -19,21 +19,32 @@
             <a class="navbar-brand" href="{% url 'budget:dashboard' %}">
                 <i class="fas fa-wallet me-2"></i>家計簿
             </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{% url 'budget:add_entry' %}">
+            <div class="navbar-nav ms-auto flex-row flex-wrap align-items-center">
+                {% if user.is_authenticated %}
+                <a class="nav-link me-3" href="{% url 'budget:add_entry' %}">
                     <i class="fas fa-plus me-1"></i>入力
                 </a>
-                <a class="nav-link" href="{% url 'budget:monthly_view' %}">
+                <a class="nav-link me-3" href="{% url 'budget:monthly_view' %}">
                     <i class="fas fa-calendar me-1"></i>月別
                 </a>
-                <a href="{% url 'budget:graph' %}" class="nav-link">
-                    <i class="fas fa-calendar me-2"></i>年間月別グラフ表示へ
-                </a>                
+                <a class="nav-link me-3" href="{% url 'budget:graph' %}">
+                    <i class="fas fa-chart-column me-1"></i>年間グラフ
+                </a>
+                <a class="nav-link me-3" href="{% url 'budget:goal_list' %}">
+                    <i class="fas fa-bullseye me-1"></i>目標
+                </a>
+                <span class="navbar-text me-2">{{ user.get_username }}</span>
+                {# Django 5 以降は logout が POST 限定になるため、最初から POST フォームにしておく #}
+                <form method="post" action="{% url 'logout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-light">ログアウト</button>
+                </form>
+                {% endif %}
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
+    <div class="container mt-4 mb-5">
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
